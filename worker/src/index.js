@@ -305,7 +305,7 @@ async function getPostBySlug(slug, env) {
 }
 
 async function getCategories(env) {
-  const results = await firestoreQuery(env, 'categories', [], [{ field: { fieldPath: 'name' }, direction: 'ASCENDING' }]);
+  const results = await firestoreQuery(env, 'categories', [], null);
   const cats = parseQueryResults(results);
   return json(cats);
 }
