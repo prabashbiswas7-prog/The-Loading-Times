@@ -5,7 +5,7 @@
 
 // ── CONFIG ──────────────────────────────────────────────────────
 // Change this to your deployed Worker URL after deployment
-const API = window.TLT_API || 'https://tlt-api.YOUR_SUBDOMAIN.workers.dev';
+const API = window.TLT_API || 'https://tlt-api.prabashbiswas7.workers.dev';
 
 // ── API CLIENT ──────────────────────────────────────────────────
 async function api(path, options = {}) {
