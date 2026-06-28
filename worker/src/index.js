@@ -67,6 +67,10 @@ export default {
 // FIREBASE HELPERS
 // ═══════════════════════════════════════════════════════════════
 
+function base64urlEncode(str) {
+  return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
 async function getFirebaseToken(env) {
   const now = Math.floor(Date.now() / 1000);
   const header = base64urlEncode(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
