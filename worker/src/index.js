@@ -116,12 +116,20 @@ function firestoreURL(env, path) {
   return `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents/${path}`;
 }
 
+async function handleFirestoreResponse(res) {
+  if (!res.ok) {
+    const errorBody = await res.json().catch(() => ({}));
+    throw new Error(errorBody.error?.message || `Firestore error: ${res.status} ${res.statusText}`);
+  }
+  return res.json();
+}
+
 async function firestoreGet(env, path) {
   const token = await getFirebaseToken(env);
   const res = await fetch(firestoreURL(env, path), {
     headers: { Authorization: `Bearer ${token}` }
   });
-  return res.json();
+  return handleFirestoreResponse(res);
 }
 
 async function firestoreQuery(env, collection, conditions = [], orderBy = null, limit = null) {
@@ -145,7 +153,7 @@ async function firestoreQuery(env, collection, conditions = [], orderBy = null, 
     },
     body: JSON.stringify(query),
   });
-  return res.json();
+  return handleFirestoreResponse(res);
 }
 
 async function firestoreSet(env, path, data) {
@@ -158,7 +166,7 @@ async function firestoreSet(env, path, data) {
     },
     body: JSON.stringify({ fields: toFirestoreFields(data) }),
   });
-  return res.json();
+  return handleFirestoreResponse(res);
 }
 
 async function firestoreUpdate(env, path, data) {
@@ -173,15 +181,19 @@ async function firestoreUpdate(env, path, data) {
     },
     body: JSON.stringify({ fields }),
   });
-  return res.json();
+  return handleFirestoreResponse(res);
 }
 
 async function firestoreDelete(env, path) {
   const token = await getFirebaseToken(env);
-  await fetch(firestoreURL(env, path), {
+  const res = await fetch(firestoreURL(env, path), {
     method: 'DELETE',
     headers: { Authorization: `Bearer ${token}` }
   });
+  if (!res.ok) {
+    const errorBody = await res.json().catch(() => ({}));
+    throw new Error(errorBody.error?.message || `Firestore error: ${res.status} ${res.statusText}`);
+  }
 }
 
 async function firestoreAdd(env, collection, data) {
@@ -194,7 +206,7 @@ async function firestoreAdd(env, collection, data) {
     },
     body: JSON.stringify({ fields: toFirestoreFields(data) }),
   });
-  return res.json();
+  return handleFirestoreResponse(res);
 }
 
 function buildWhere(conditions) {
@@ -218,9 +230,9 @@ function opMap(op) {
 
 function toFirestoreValue(v) {
   if (typeof v === 'string') return { stringValue: v };
-  if (typeof v === 'number') return { integerValue: v };
+  if (typeof v === 'number') return Number.isInteger(v) ? { integerValue: v } : { doubleValue: v };
   if (typeof v === 'boolean') return { booleanValue: v };
-  if (v === null) return { nullValue: null };
+  if (v === null) return { nullValue: 'NULL_VALUE' };
   return { stringValue: String(v) };
 }
 
@@ -456,11 +468,15 @@ async function handleAdmin(request, env, path) {
     const body = await request.json();
     const token = await getFirebaseToken(env);
     const url = `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents/settings/site`;
-    await fetch(url, {
+    const res = await fetch(url, {
       method: 'PATCH',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ fields: toFirestoreFields(body) }),
     });
+    if (!res.ok) {
+      const errorBody = await res.json().catch(() => ({}));
+      throw new Error(errorBody.error?.message || `Firestore error: ${res.status} ${res.statusText}`);
+    }
     return json({ success: true });
   }
 
