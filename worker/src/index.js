@@ -232,6 +232,8 @@ function toFirestoreFields(obj) {
       fields[k] = { timestampValue: new Date().toISOString() };
     } else if (Array.isArray(v)) {
       fields[k] = { arrayValue: { values: v.map(toFirestoreValue) } };
+    } else if (v && typeof v === 'object') {
+      fields[k] = { mapValue: { fields: toFirestoreFields(v) } };
     } else {
       fields[k] = toFirestoreValue(v);
     }
