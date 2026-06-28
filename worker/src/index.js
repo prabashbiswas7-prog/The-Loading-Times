@@ -452,7 +452,13 @@ async function handleAdmin(request, env, path) {
   // Settings
   if (subPath === '/settings' && request.method === 'PUT') {
     const body = await request.json();
-    await firestoreUpdate(env, 'settings/site', body);
+    const token = await getFirebaseToken(env);
+    const url = `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents/settings/site`;
+    await fetch(url, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields: toFirestoreFields(body) }),
+    });
     return json({ success: true });
   }
 
