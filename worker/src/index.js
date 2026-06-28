@@ -68,10 +68,9 @@ export default {
 // ═══════════════════════════════════════════════════════════════
 
 async function getFirebaseToken(env) {
-  // Firebase Admin auth via service account → get access token
   const now = Math.floor(Date.now() / 1000);
-  const header = btoa(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
-  const payload = btoa(JSON.stringify({
+  const header = base64urlEncode(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
+  const payload = base64urlEncode(JSON.stringify({
     iss: env.FIREBASE_CLIENT_EMAIL,
     sub: env.FIREBASE_CLIENT_EMAIL,
     aud: 'https://oauth2.googleapis.com/token',
