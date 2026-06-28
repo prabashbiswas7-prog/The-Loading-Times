@@ -429,7 +429,7 @@ async function handleAdmin(request, env, path) {
 
   // Posts CRUD
   if (subPath === '/posts' && request.method === 'GET') {
-    const results = await firestoreQuery(env, 'posts', [], [{ field: { fieldPath: 'createdAt' }, direction: 'DESCENDING' }]);
+    const results = await firestoreQuery(env, 'posts', [], null);
     return json(parseQueryResults(results));
   }
   if (subPath === '/posts' && request.method === 'POST') {
@@ -454,6 +454,10 @@ async function handleAdmin(request, env, path) {
   }
 
   // Categories CRUD
+  if (subPath === '/categories' && request.method === 'GET') {
+    const results = await firestoreQuery(env, 'categories', [], null);
+    return json(parseQueryResults(results));
+  }
   if (subPath === '/categories' && request.method === 'POST') {
     const body = await request.json();
     body.createdAt = { __serverTimestamp: true };
@@ -491,7 +495,7 @@ async function handleAdmin(request, env, path) {
 
   // Subscribers
   if (subPath === '/subscribers' && request.method === 'GET') {
-    const results = await firestoreQuery(env, 'subscribers', [], [{ field: { fieldPath: 'createdAt' }, direction: 'DESCENDING' }]);
+    const results = await firestoreQuery(env, 'subscribers', [], null);
     return json(parseQueryResults(results));
   }
   if (subPath.startsWith('/subscribers/') && request.method === 'DELETE') {
