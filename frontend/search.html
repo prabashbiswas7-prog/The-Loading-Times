@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Search — The Loading Times</title>
+  <link rel="icon" href="/assets/img/logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Lora:ital,wght@0,400;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<header class="site-header" id="site-header"></header>
+<div class="container" style="padding-top:40px;padding-bottom:80px;">
+  <h1 style="font-family:var(--font-head);font-size:32px;margin-bottom:24px;">Search</h1>
+  <form class="search-bar-big" id="search-form">
+    <input type="search" id="search-input" placeholder="Search articles, topics, tags..." autofocus>
+    <button type="submit" class="btn btn-green">Search</button>
+  </form>
+  <div id="search-info" style="font-size:13px;color:var(--text-muted);margin-bottom:20px;"></div>
+  <div class="cards-grid" id="search-results"></div>
+</div>
+<footer class="site-footer" id="site-footer"></footer>
+<script src="/js/core.js"></script>
+<script>
+const q = new URLSearchParams(location.search).get('q') || '';
+const input = document.getElementById('search-input');
+input.value = q;
+
+async function doSearch(query) {
+  if (!query.trim()) return;
+  document.title = `"${query}" — The Loading Times`;
+  document.getElementById('search-info').textContent = 'Searching...';
+  document.getElementById('search-results').innerHTML = '<div class="spinner"></div>';
+  try {
+    const results = await api(`/api/search?q=${encodeURIComponent(query)}`);
+    await attachCatNames(results);
+    document.getElementById('search-info').textContent = `${results.length} result${results.length !== 1 ? 's' : ''} for "${query}"`;
+    document.getElementById('search-results').innerHTML = results.length
+      ? results.map(p => cardHtml(p, p._catName)).join('')
+      : `<div class="empty-state">No articles found for "<strong>${esc(query)}</strong>".<br><br><a href="/articles.html" class="text-green">Browse all articles →</a></div>`;
+  } catch(e) {
+    document.getElementById('search-results').innerHTML = `<div class="empty-state">Search failed. Please try again.</div>`;
+  }
+}
+
+document.getElementById('search-form').addEventListener('submit', e => {
+  e.preventDefault();
+  const val = input.value.trim();
+  if (val) { history.pushState({}, '', `?q=${encodeURIComponent(val)}`); doSearch(val); }
+});
+
+if (q) doSearch(q);
+</script>
+</body>
+</html>

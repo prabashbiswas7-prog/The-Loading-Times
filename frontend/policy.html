@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PAGE_TITLE — The Loading Times</title>
+  <link rel="icon" href="/assets/img/logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Lora:ital,wght@0,400;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<header class="site-header" id="site-header"></header>
+<div class="container"><div class="static-content" id="page-content"><div class="spinner"></div></div></div>
+<footer class="site-footer" id="site-footer"></footer>
+<script src="/js/core.js"></script>
+<script>
+const PAGES = {
+  'faq.html': { title: 'FAQ', content: `<h1>Frequently Asked Questions</h1><h2>Is The Loading Times a real news site?</h2><p>Yes, and also no. We report real things. Sometimes satirically. Always slowly.</p><h2>Why does the page take so long to load?</h2><p>Character.</p><h2>How do I submit a story tip?</h2><p>Head over to our <a href="/contact.html" class="text-green">Contact page</a> and let us know. We'll get to it shortly. Or next week.</p><h2>Can I write for The Loading Times?</h2><p>Yes! Check out our <a href="/write-for-us.html" class="text-green">Write For Us</a> page for guidelines.</p><h2>How do I unsubscribe from the newsletter?</h2><p>Email us at hello@theloadingtimes.com with the subject "Unsubscribe" and we'll remove you manually. We respect your time, unlike our load speeds.</p>` },
+  'policy.html': { title: 'Privacy Policy', content: `<h1>Privacy Policy</h1><p style="color:var(--text-dim);font-size:13px;">Last updated: January 2025</p><h2>Information We Collect</h2><p>When you subscribe to our newsletter, we collect your name and email address. When you visit our site, standard server logs may record your IP address and browser information.</p><h2>How We Use Your Information</h2><p>Your email is used solely to send you The Loading Times newsletter. We do not sell, rent, or share your personal information with third parties for marketing purposes.</p><h2>Cookies</h2><p>We use minimal cookies to remember your preferences (such as whether you've seen our welcome popup). We do not use advertising cookies or cross-site tracking.</p><h2>Data Storage</h2><p>Subscriber data is stored securely in Firebase Firestore with restricted access. We use Cloudflare for content delivery and security.</p><h2>Your Rights</h2><p>You may request deletion of your data at any time by contacting us at hello@theloadingtimes.com.</p><h2>Contact</h2><p>For privacy questions, email hello@theloadingtimes.com.</p>` },
+  'terms.html': { title: 'Terms of Use', content: `<h1>Terms of Use</h1><p style="color:var(--text-dim);font-size:13px;">Last updated: January 2025</p><h2>Acceptance of Terms</h2><p>By accessing The Loading Times, you agree to these terms. If you don't agree, please close this tab slowly and respectfully.</p><h2>Content</h2><p>All articles on The Loading Times are for informational and entertainment purposes. Some content may be satirical. We try to label it clearly. If you're not sure, please apply critical thinking before forwarding to your uncle.</p><h2>Intellectual Property</h2><p>All content on this site is owned by The Loading Times unless otherwise noted. You may share articles with attribution but may not republish them wholesale without permission.</p><h2>Limitation of Liability</h2><p>We are not liable for decisions made based on our satirical content. We are especially not liable if you cite us in a serious argument.</p><h2>Changes</h2><p>We reserve the right to update these terms. We'll update the "last updated" date. That's about all the notice you'll get.</p>` },
+  'write-for-us.html': { title: 'Write For Us', content: `<h1>Write For Us</h1><p>The Loading Times welcomes contributions from writers who understand the value of taking their time.</p><h2>What We're Looking For</h2><ul><li>Long-form journalism and investigative pieces</li><li>Satire and commentary with a sharp point of view</li><li>Opinion pieces that actually have an opinion</li><li>Explainers that explain things without condescension</li></ul><h2>What We're NOT Looking For</h2><ul><li>Press releases dressed as journalism</li><li>Hot takes that will age poorly by tomorrow</li><li>Anything written by AI and submitted as your own</li><li>500 words about nothing</li></ul><h2>Submission Guidelines</h2><p>Send your pitch or full draft to hello@theloadingtimes.com with the subject line "Submission: [Your Article Title]". Include a brief bio and any relevant links. We aim to respond within 2 weeks — which, for journalism, is actually quite fast.</p><h2>Compensation</h2><p>We currently offer byline credit and the satisfaction of having contributed to the slowest news site on the internet. Paid opportunities may open as we grow.</p>` }
+};
+const page = location.pathname.split('/').pop();
+const data = PAGES[page] || { title: 'Page', content: '<h1>Page Not Found</h1><p>This page does not exist.</p>' };
+document.title = `${data.title} — The Loading Times`;
+document.getElementById('page-content').innerHTML = data.content;
+</script>
+</body>
+</html>

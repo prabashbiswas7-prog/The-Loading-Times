@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tag — The Loading Times</title>
+  <link rel="icon" href="/assets/img/logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Lora:ital,wght@0,400;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<header class="site-header" id="site-header"></header>
+<div class="container">
+  <div class="page-hero">
+    <p style="color:var(--text-muted);font-size:12px;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Tag</p>
+    <h1 id="tag-title">Loading...</h1>
+  </div>
+  <div class="cards-grid" id="tag-grid"><div class="spinner"></div></div>
+</div>
+<footer class="site-footer" id="site-footer"></footer>
+<script src="/js/core.js"></script>
+<script>
+async function init() {
+  const tag = new URLSearchParams(location.search).get('tag');
+  if (!tag) { document.getElementById('tag-grid').innerHTML = `<div class="empty-state">No tag specified.</div>`; return; }
+  document.title = `#${tag} — The Loading Times`;
+  document.getElementById('tag-title').textContent = `#${tag}`;
+  try {
+    const posts = await api(`/api/tags?tag=${encodeURIComponent(tag)}`);
+    await attachCatNames(posts);
+    document.getElementById('tag-grid').innerHTML = posts.length
+      ? posts.map(p => cardHtml(p, p._catName)).join('')
+      : `<div class="empty-state">No articles with tag "#${esc(tag)}".</div>`;
+  } catch(e) { document.getElementById('tag-grid').innerHTML = `<div class="empty-state">Error loading articles.</div>`; }
+}
+init();
+</script>
+</body>
+</html>

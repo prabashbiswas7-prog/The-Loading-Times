@@ -1,0 +1,11 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ALL reads and writes are BLOCKED from the browser.
+    // Only the Cloudflare Worker (Firebase Admin SDK) can access Firestore.
+    // This is the key security improvement over the old architecture.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

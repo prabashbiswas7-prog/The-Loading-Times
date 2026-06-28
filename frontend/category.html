@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Category — The Loading Times</title>
+  <link rel="icon" href="/assets/img/logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Lora:ital,wght@0,400;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<header class="site-header" id="site-header"></header>
+<div class="container">
+  <div class="page-hero" id="cat-hero">
+    <h1 id="cat-title">Loading...</h1>
+    <p id="cat-desc"></p>
+  </div>
+  <div class="cards-grid" id="cat-grid"><div class="spinner"></div></div>
+  <div class="pagination hidden" id="pagination">
+    <button id="prev-btn" disabled>← Newer</button>
+    <button id="next-btn">Older →</button>
+  </div>
+</div>
+<footer class="site-footer" id="site-footer"></footer>
+<script src="/js/core.js"></script>
+<script>
+const PAGE_SIZE = 16;
+let posts = [], page = 1;
+
+async function init() {
+  const slug = new URLSearchParams(location.search).get('slug');
+  if (!slug) { document.getElementById('cat-grid').innerHTML = `<div class="empty-state">Category not found.</div>`; return; }
+
+  try {
+    const cat = await api(`/api/categories/${encodeURIComponent(slug)}`);
+    document.title = `${cat.name} — The Loading Times`;
+    document.getElementById('cat-title').textContent = cat.name;
+    document.getElementById('cat-desc').textContent = cat.description || '';
+
+    const all = await api(`/api/posts?categoryId=${cat.id}`);
+    posts = sortByDate(all);
+    await attachCatNames(posts);
+    render();
+  } catch(e) {
+    document.getElementById('cat-grid').innerHTML = `<div class="empty-state">Category not found.</div>`;
+  }
+}
+
+function render() {
+  const grid = document.getElementById('cat-grid');
+  const pag = document.getElementById('pagination');
+  const start = (page - 1) * PAGE_SIZE;
+  const slice = posts.slice(start, start + PAGE_SIZE);
+  grid.innerHTML = slice.length ? slice.map(p => cardHtml(p, p._catName)).join('') : `<div class="empty-state">No articles in this category yet.</div>`;
+  if (posts.length > PAGE_SIZE) {
+    pag.classList.remove('hidden');
+    document.getElementById('prev-btn').disabled = page === 1;
+    document.getElementById('next-btn').disabled = start + PAGE_SIZE >= posts.length;
+  }
+}
+
+document.getElementById('next-btn').addEventListener('click', () => { page++; render(); });
+document.getElementById('prev-btn').addEventListener('click', () => { page--; render(); });
+init();
+</script>
+</body>
+</html>

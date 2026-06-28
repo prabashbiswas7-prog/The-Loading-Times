@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — The Loading Times</title>
+  <link rel="icon" href="/assets/img/logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+  <!-- Firebase Auth only (client-side login — not a secret) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <style>
+    :root {
+      --bg:#0d0d0d;--bg2:#141414;--bg3:#1a1a1a;--bg4:#222;
+      --border:#2a2a2a;--text:#e8e8e8;--muted:#888;--dim:#555;
+      --green:#3ddc84;--red:#ff4545;
+      --font:'Inter',system-ui,sans-serif;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;min-height:100vh;}
+    a{color:inherit;text-decoration:none;}
+    button{cursor:pointer;border:none;background:none;font-family:inherit;font-size:14px;}
+    input,textarea,select{font-family:inherit;font-size:14px;}
+
+    /* Auth Screen */
+    #auth-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--bg);}
+    .auth-box{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:40px;width:360px;text-align:center;}
+    .auth-box h1{font-family:'Playfair Display',serif;font-size:28px;margin-bottom:6px;}
+    .auth-box p{color:var(--muted);font-size:13px;margin-bottom:28px;}
+    .auth-box input{width:100%;padding:11px 14px;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:6px;margin-bottom:12px;outline:none;}
+    .auth-box input:focus{border-color:var(--green);}
+    #auth-error{color:var(--red);font-size:12px;margin-top:8px;min-height:18px;}
+
+    /* App Layout */
+    #app{display:none;min-height:100vh;}
+    .admin-layout{display:grid;grid-template-columns:220px 1fr;min-height:100vh;}
+    .sidebar{background:var(--bg2);border-right:1px solid var(--border);padding:20px 0;display:flex;flex-direction:column;}
+    .sidebar-logo{padding:0 20px 20px;border-bottom:1px solid var(--border);margin-bottom:10px;}
+    .sidebar-logo span{font-family:'Playfair Display',serif;font-size:18px;}
+    .sidebar-logo span b{color:var(--green);}
+    .nav-item{display:flex;align-items:center;gap:10px;padding:10px 20px;color:var(--muted);cursor:pointer;transition:color .2s,background .2s;border-left:3px solid transparent;font-size:13px;font-weight:500;}
+    .nav-item:hover{color:var(--text);background:var(--bg3);}
+    .nav-item.active{color:var(--green);background:var(--bg3);border-left-color:var(--green);}
+    .nav-item .icon{width:16px;text-align:center;}
+    .sidebar-footer{margin-top:auto;padding:16px 20px;border-top:1px solid var(--border);}
+    .main{padding:30px;overflow-y:auto;}
+    .page-title{font-size:22px;font-weight:600;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;gap:16px;}
+
+    /* Buttons */
+    .btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;transition:opacity .2s;}
+    .btn:hover{opacity:.85;}
+    .btn-green{background:var(--green);color:#000;}
+    .btn-red{background:var(--red);color:#fff;}
+    .btn-outline{background:transparent;border:1px solid var(--border);color:var(--text);}
+    .btn-outline:hover{border-color:var(--green);color:var(--green);}
+    .btn-sm{padding:6px 12px;font-size:12px;}
+
+    /* Table */
+    .table-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+    table{width:100%;border-collapse:collapse;}
+    th{padding:12px 16px;text-align:left;font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);}
+    td{padding:12px 16px;border-bottom:1px solid var(--border);vertical-align:middle;}
+    tr:last-child td{border-bottom:none;}
+    tr:hover td{background:var(--bg3);}
+    .badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;}
+    .badge-green{background:rgba(61,220,132,.15);color:var(--green);}
+    .badge-gray{background:var(--bg4);color:var(--muted);}
+
+    /* Form */
+    .form-grid{display:grid;grid-template-columns:1fr 320px;gap:24px;align-items:start;}
+    @media(max-width:900px){.form-grid{grid-template-columns:1fr;}}
+    .field{margin-bottom:18px;}
+    .field label{display:block;font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+    .field input,.field select,.field textarea{width:100%;padding:10px 13px;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:6px;outline:none;transition:border-color .2s;}
+    .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--green);}
+    .field textarea{resize:vertical;min-height:120px;}
+    .field select option{background:var(--bg2);}
+    .card-box{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:20px;}
+    .card-box h3{font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:16px;}
+
+    /* Rich text toolbar */
+    .editor-toolbar{display:flex;gap:4px;flex-wrap:wrap;padding:8px;background:var(--bg3);border:1px solid var(--border);border-bottom:none;border-radius:6px 6px 0 0;}
+    .editor-toolbar button{padding:5px 9px;border-radius:4px;color:var(--text);font-size:12px;font-weight:600;transition:background .2s;}
+    .editor-toolbar button:hover{background:var(--bg4);}
+    .editor-area{width:100%;min-height:400px;padding:16px;background:var(--bg);border:1px solid var(--border);border-radius:0 0 6px 6px;color:var(--text);font-family:'Lora',Georgia,serif;font-size:15px;line-height:1.8;outline:none;resize:vertical;}
+    .editor-area:focus{border-color:var(--green);}
+
+    /* Stats cards */
+    .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px;}
+    @media(max-width:768px){.stats-grid{grid-template-columns:repeat(2,1fr);}}
+    .stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:20px;}
+    .stat-card .label{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;}
+    .stat-card .value{font-size:28px;font-weight:700;color:var(--text);}
+    .stat-card .sub{font-size:12px;color:var(--muted);margin-top:4px;}
+
+    /* Toast */
+    .toast{position:fixed;bottom:24px;right:24px;background:var(--bg3);border:1px solid var(--border);padding:12px 20px;border-radius:8px;font-size:13px;z-index:9999;transform:translateY(100px);opacity:0;transition:transform .3s,opacity .3s;max-width:280px;}
+    .toast.show{transform:translateY(0);opacity:1;}
+    .toast.success{border-color:var(--green);}
+    .toast.error{border-color:var(--red);}
+
+    .hidden{display:none!important;}
+    .spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin .8s linear infinite;margin:40px auto;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+    .empty{text-align:center;padding:48px;color:var(--muted);}
+    .cover-preview{width:100%;height:160px;object-fit:cover;border-radius:6px;margin-top:8px;display:none;}
+  </style>
+</head>
+<body>
+
+<!-- Auth Screen -->
+<div id="auth-screen">
+  <div class="auth-box">
+    <h1>The Loading <span style="color:var(--green)">Times</span></h1>
+    <p>Admin Panel — Sign In</p>
+    <input type="email" id="a-email" placeholder="Admin Email" autocomplete="email">
+    <input type="password" id="a-pass" placeholder="Password" autocomplete="current-password">
+    <button class="btn btn-green" style="width:100%;justify-content:center;" onclick="signIn()">Sign In</button>
+    <div id="auth-error"></div>
+  </div>
+</div>
+
+<!-- Admin App -->
+<div id="app">
+  <div class="admin-layout">
+    <!-- Sidebar -->
+    <nav class="sidebar">
+      <div class="sidebar-logo">
+        <span>TLT <b>Admin</b></span>
+      </div>
+      <div class="nav-item active" onclick="showPage('dashboard')" id="nav-dashboard">
+        <span class="icon">📊</span> Dashboard
+      </div>
+      <div class="nav-item" onclick="showPage('posts')" id="nav-posts">
+        <span class="icon">📝</span> Posts
+      </div>
+      <div class="nav-item" onclick="showPage('new-post')" id="nav-new-post">
+        <span class="icon">✏️</span> New Post
+      </div>
+      <div class="nav-item" onclick="showPage('categories')" id="nav-categories">
+        <span class="icon">🗂️</span> Categories
+      </div>
+      <div class="nav-item" onclick="showPage('subscribers')" id="nav-subscribers">
+        <span class="icon">📧</span> Subscribers
+      </div>
+      <div class="nav-item" onclick="showPage('settings')" id="nav-settings">
+        <span class="icon">⚙️</span> Settings
+      </div>
+      <div class="sidebar-footer">
+        <button class="btn btn-outline btn-sm" onclick="signOut()" style="width:100%;justify-content:center;">Sign Out</button>
+      </div>
+    </nav>
+
+    <!-- Main -->
+    <div class="main" id="main-area">
+      <div class="spinner"></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── CONFIG ── Replace with your Firebase project config (Auth only — no secrets here)
+const FIREBASE_CONFIG = {
+  apiKey: "YOUR_FIREBASE_WEB_API_KEY",
+  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+  projectId: "YOUR_PROJECT_ID",
+};
+
+const API = 'https://tlt-api.YOUR_SUBDOMAIN.workers.dev';
+
+firebase.initializeApp(FIREBASE_CONFIG);
+const auth = firebase.auth();
+
+let currentUser = null;
+let idToken = null;
+let editingPostId = null;
+let editingCatId = null;
+
+// ── AUTH ──────────────────────────────────────────────────────────
+auth.onAuthStateChanged(async user => {
+  if (user) {
+    currentUser = user;
+    idToken = await user.getIdToken();
+    document.getElementById('auth-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    showPage('dashboard');
+    // Refresh token every 55 min
+    setInterval(async () => { idToken = await user.getIdToken(true); }, 55 * 60 * 1000);
+  } else {
+    document.getElementById('auth-screen').style.display = 'flex';
+    document.getElementById('app').style.display = 'none';
+  }
+});
+
+async function signIn() {
+  const email = document.getElementById('a-email').value.trim();
+  const pass = document.getElementById('a-pass').value;
+  const errEl = document.getElementById('auth-error');
+  errEl.textContent = '';
+  try {
+    await auth.signInWithEmailAndPassword(email, pass);
+  } catch(e) {
+    errEl.textContent = e.message;
+  }
+}
+
+function signOut() { auth.signOut(); }
+
+// Allow pressing Enter to sign in
+document.getElementById('a-pass').addEventListener('keydown', e => { if (e.key === 'Enter') signIn(); });
+
+// ── API ───────────────────────────────────────────────────────────
+async function adminApi(path, options = {}) {
+  const res = await fetch(`${API}${path}`, {
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+    ...options,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'API error');
+  }
+  return res.json();
+}
+
+// ── TOAST ─────────────────────────────────────────────────────────
+function toast(msg, type = 'success') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `toast show ${type}`;
+  setTimeout(() => el.classList.remove('show'), 3500);
+}
+
+// ── NAV ───────────────────────────────────────────────────────────
+function showPage(page) {
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const navEl = document.getElementById(`nav-${page}`);
+  if (navEl) navEl.classList.add('active');
+  const main = document.getElementById('main-area');
+  editingPostId = null;
+  editingCatId = null;
+
+  switch(page) {
+    case 'dashboard': renderDashboard(); break;
+    case 'posts': renderPosts(); break;
+    case 'new-post': renderPostForm(); break;
+    case 'categories': renderCategories(); break;
+    case 'subscribers': renderSubscribers(); break;
+    case 'settings': renderSettings(); break;
+    default: main.innerHTML = `<div class="empty">Page not found.</div>`;
+  }
+}
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmtDate(ts) { if(!ts) return '—'; try{ return new Date(ts).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); }catch{return '—';} }
+
+// ── DASHBOARD ─────────────────────────────────────────────────────
+async function renderDashboard() {
+  const main = document.getElementById('main-area');
+  main.innerHTML = `<div class="spinner"></div>`;
+  try {
+    const [posts, cats, subs] = await Promise.all([
+      adminApi('/api/admin/posts'),
+      adminApi('/api/categories'),
+      adminApi('/api/admin/subscribers'),
+    ]);
+    const published = posts.filter(p => p.status === 'published');
+    const totalViews = posts.reduce((s,p) => s+(p.views||0), 0);
+    const recent = [...posts].sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0)).slice(0,5);
+
+    main.innerHTML = `
+      <div class="page-title">Dashboard</div>
+      <div class="stats-grid">
+        <div class="stat-card"><div class="label">Total Posts</div><div class="value">${posts.length}</div><div class="sub">${published.length} published</div></div>
+        <div class="stat-card"><div class="label">Categories</div><div class="value">${cats.length}</div><div class="sub">Topics covered</div></div>
+        <div class="stat-card"><div class="label">Subscribers</div><div class="value">${subs.length}</div><div class="sub">Newsletter members</div></div>
+        <div class="stat-card"><div class="label">Total Views</div><div class="value">${totalViews.toLocaleString()}</div><div class="sub">All time</div></div>
+      </div>
+
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:20px;">
+        <div style="font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:16px;">Recent Posts</div>
+        ${recent.map(p => `
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);">
+            <div>
+              <div style="font-weight:500;">${esc(p.title)}</div>
+              <div style="font-size:12px;color:var(--muted);">${fmtDate(p.publishedAt||p.createdAt)} · ${p.views||0} views</div>
+            </div>
+            <span class="badge ${p.status==='published'?'badge-green':'badge-gray'}">${p.status||'draft'}</span>
+          </div>
+        `).join('')}
+        <div style="margin-top:16px;"><button class="btn btn-outline btn-sm" onclick="showPage('posts')">View All Posts →</button></div>
+      </div>
+    `;
+  } catch(e) { main.innerHTML = `<div class="empty">Error loading dashboard: ${esc(e.message)}</div>`; }
+}
+
+// ── POSTS LIST ────────────────────────────────────────────────────
+async function renderPosts() {
+  const main = document.getElementById('main-area');
+  main.innerHTML = `<div class="spinner"></div>`;
+  try {
+    const posts = await adminApi('/api/admin/posts');
+    posts.sort((a,b) => new Date(b.createdAt||0)-new Date(a.createdAt||0));
+
+    main.innerHTML = `
+      <div class="page-title">
+        Posts <span style="color:var(--muted);font-size:14px;font-weight:400;">(${posts.length})</span>
+        <button class="btn btn-green btn-sm" onclick="showPage('new-post')">+ New Post</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Title</th><th>Status</th><th>Views</th><th>Date</th><th>Actions</th></tr></thead>
+          <tbody>
+            ${posts.map(p => `
+              <tr>
+                <td><a href="/article.html?slug=${esc(p.slug)}" target="_blank" style="color:var(--green);">${esc(p.title)}</a></td>
+                <td><span class="badge ${p.status==='published'?'badge-green':'badge-gray'}">${p.status||'draft'}</span></td>
+                <td>${(p.views||0).toLocaleString()}</td>
+                <td style="color:var(--muted);">${fmtDate(p.publishedAt||p.createdAt)}</td>
+                <td>
+                  <button class="btn btn-outline btn-sm" onclick="editPost('${p.id}')" style="margin-right:6px;">Edit</button>
+                  <button class="btn btn-sm" style="color:var(--red);border:1px solid var(--border);" onclick="deletePost('${p.id}','${esc(p.title)}')">Delete</button>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        ${!posts.length ? '<div class="empty">No posts yet. <button class="btn btn-green btn-sm" onclick="showPage(\'new-post\')">Create your first post</button></div>' : ''}
+      </div>
+    `;
+  } catch(e) { main.innerHTML = `<div class="empty">Error: ${esc(e.message)}</div>`; }
+}
+
+async function deletePost(id, title) {
+  if (!confirm(`Delete "${title}"? This cannot be undone.`)) return;
+  try {
+    await adminApi(`/api/admin/posts/${id}`, { method: 'DELETE' });
+    toast('Post deleted');
+    renderPosts();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function editPost(id) {
+  editingPostId = id;
+  const posts = await adminApi('/api/admin/posts');
+  const post = posts.find(p => p.id === id);
+  if (!post) { toast('Post not found', 'error'); return; }
+  renderPostForm(post);
+}
+
+// ── POST FORM ─────────────────────────────────────────────────────
+async function renderPostForm(post = null) {
+  const main = document.getElementById('main-area');
+  const cats = await adminApi('/api/categories').catch(()=>[]);
+  const isEdit = !!post;
+
+  main.innerHTML = `
+    <div class="page-title">
+      ${isEdit ? 'Edit Post' : 'New Post'}
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-outline btn-sm" onclick="showPage('posts')">← Back</button>
+        <button class="btn btn-outline btn-sm" onclick="savePost('draft')">${isEdit?'Save Draft':'Save as Draft'}</button>
+        <button class="btn btn-green btn-sm" onclick="savePost('published')">${isEdit?'Update & Publish':'Publish'}</button>
+      </div>
+    </div>
+
+    <div class="form-grid">
+      <div>
+        <div class="field">
+          <label>Title *</label>
+          <input type="text" id="p-title" placeholder="Article title..." value="${esc(post?.title||'')}">
+        </div>
+        <div class="field">
+          <label>Slug *</label>
+          <input type="text" id="p-slug" placeholder="article-slug" value="${esc(post?.slug||'')}">
+        </div>
+        <div class="field">
+          <label>Excerpt</label>
+          <textarea id="p-excerpt" rows="3" placeholder="Short summary for SEO and previews...">${esc(post?.excerpt||'')}</textarea>
+        </div>
+        <div class="field">
+          <label>Content (HTML supported)</label>
+          <div class="editor-toolbar">
+            <button onclick="fmt('bold')" title="Bold"><b>B</b></button>
+            <button onclick="fmt('italic')" title="Italic"><i>I</i></button>
+            <button onclick="fmt('underline')" title="Underline"><u>U</u></button>
+            <button onclick="wrapTag('h2')" title="Heading 2">H2</button>
+            <button onclick="wrapTag('h3')" title="Heading 3">H3</button>
+            <button onclick="wrapTag('p')" title="Paragraph">¶</button>
+            <button onclick="wrapTag('blockquote')" title="Quote">"</button>
+            <button onclick="insertLink()" title="Link">🔗</button>
+            <button onclick="insertImg()" title="Image">🖼</button>
+            <button onclick="wrapTag('ul')" title="List">≡</button>
+            <button onclick="toggleSource()" title="Toggle Source" id="src-btn">Source</button>
+          </div>
+          <div id="p-editor" class="editor-area" contenteditable="true">${post?.content||''}</div>
+          <textarea id="p-source" class="editor-area hidden" style="font-family:monospace;font-size:13px;">${esc(post?.content||'')}</textarea>
+        </div>
+      </div>
+
+      <div>
+        <div class="card-box" style="margin-bottom:16px;">
+          <h3>Settings</h3>
+          <div class="field">
+            <label>Category</label>
+            <select id="p-cat">
+              <option value="">— Select Category —</option>
+              ${cats.map(c => `<option value="${esc(c.id)}" ${post?.categoryId===c.id?'selected':''}>${esc(c.name)}</option>`).join('')}
+            </select>
+          </div>
+          <div class="field">
+            <label>Author</label>
+            <input type="text" id="p-author" value="${esc(post?.author||'The Loading Times')}" placeholder="Author name">
+          </div>
+          <div class="field">
+            <label>Read Time (minutes)</label>
+            <input type="number" id="p-readtime" value="${post?.readTime||''}" placeholder="e.g. 5">
+          </div>
+          <div class="field" style="display:flex;align-items:center;gap:10px;">
+            <input type="checkbox" id="p-featured" style="width:auto;" ${post?.featured?'checked':''}>
+            <label for="p-featured" style="text-transform:none;letter-spacing:0;margin:0;cursor:pointer;">Featured (show in hero)</label>
+          </div>
+        </div>
+
+        <div class="card-box" style="margin-bottom:16px;">
+          <h3>Cover Image</h3>
+          <div class="field">
+            <label>Image URL</label>
+            <input type="url" id="p-cover" placeholder="https://..." value="${esc(post?.coverImage||'')}" oninput="previewCover(this.value)">
+            <img id="cover-preview" class="cover-preview" alt="Cover preview">
+          </div>
+        </div>
+
+        <div class="card-box">
+          <h3>Tags</h3>
+          <div class="field">
+            <label>Tags (comma separated)</label>
+            <input type="text" id="p-tags" placeholder="politics, india, news" value="${esc((post?.tags||[]).join(', '))}">
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Auto-generate slug from title
+  document.getElementById('p-title').addEventListener('input', function() {
+    if (!editingPostId) {
+      document.getElementById('p-slug').value = this.value.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+    }
+  });
+
+  if (post?.coverImage) previewCover(post.coverImage);
+}
+
+function previewCover(url) {
+  const img = document.getElementById('cover-preview');
+  if (url) { img.src = url; img.style.display = 'block'; } else { img.style.display = 'none'; }
+}
+
+let sourceMode = false;
+function toggleSource() {
+  const editor = document.getElementById('p-editor');
+  const source = document.getElementById('p-source');
+  sourceMode = !sourceMode;
+  if (sourceMode) {
+    source.value = editor.innerHTML;
+    editor.classList.add('hidden');
+    source.classList.remove('hidden');
+    document.getElementById('src-btn').style.color = 'var(--green)';
+  } else {
+    editor.innerHTML = source.value;
+    source.classList.add('hidden');
+    editor.classList.remove('hidden');
+    document.getElementById('src-btn').style.color = '';
+  }
+}
+
+function fmt(cmd) { document.getElementById('p-editor').focus(); document.execCommand(cmd); }
+function wrapTag(tag) {
+  const editor = document.getElementById('p-editor');
+  editor.focus();
+  const sel = window.getSelection();
+  if (sel.rangeCount) {
+    const range = sel.getRangeAt(0);
+    const el = document.createElement(tag);
+    try { range.surroundContents(el); } catch{ el.appendChild(range.extractContents()); range.insertNode(el); }
+  }
+}
+function insertLink() {
+  const url = prompt('URL:');
+  if (url) { document.getElementById('p-editor').focus(); document.execCommand('createLink', false, url); }
+}
+function insertImg() {
+  const url = prompt('Image URL:');
+  if (url) { document.getElementById('p-editor').focus(); document.execCommand('insertHTML', false, `<img src="${url}" alt="" style="max-width:100%;">`); }
+}
+
+async function savePost(status) {
+  const title = document.getElementById('p-title').value.trim();
+  const slug = document.getElementById('p-slug').value.trim();
+  if (!title || !slug) { toast('Title and slug are required', 'error'); return; }
+
+  const content = sourceMode
+    ? document.getElementById('p-source').value
+    : document.getElementById('p-editor').innerHTML;
+
+  const tags = document.getElementById('p-tags').value.split(',').map(t=>t.trim()).filter(Boolean);
+  const readTime = parseInt(document.getElementById('p-readtime').value) || null;
+
+  const data = {
+    title,
+    slug,
+    content,
+    excerpt: document.getElementById('p-excerpt').value.trim(),
+    categoryId: document.getElementById('p-cat').value || null,
+    author: document.getElementById('p-author').value.trim(),
+    coverImage: document.getElementById('p-cover').value.trim() || null,
+    featured: document.getElementById('p-featured').checked,
+    tags,
+    status,
+    readTime,
+  };
+
+  if (status === 'published' && !editingPostId) {
+    data.publishedAt = new Date().toISOString();
+  }
+
+  try {
+    if (editingPostId) {
+      await adminApi(`/api/admin/posts/${editingPostId}`, { method: 'PUT', body: JSON.stringify(data) });
+      toast('Post updated ✓');
+    } else {
+      await adminApi('/api/admin/posts', { method: 'POST', body: JSON.stringify(data) });
+      toast('Post created ✓');
+    }
+    showPage('posts');
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+// ── CATEGORIES ────────────────────────────────────────────────────
+async function renderCategories() {
+  const main = document.getElementById('main-area');
+  main.innerHTML = `<div class="spinner"></div>`;
+  try {
+    const cats = await adminApi('/api/categories');
+
+    main.innerHTML = `
+      <div class="page-title">
+        Categories
+        <button class="btn btn-green btn-sm" onclick="showCatForm()">+ Add Category</button>
+      </div>
+
+      <div id="cat-form-area" class="hidden" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:20px;margin-bottom:20px;">
+        <h3 style="margin-bottom:16px;font-size:15px;" id="cat-form-title">New Category</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="field"><label>Name *</label><input type="text" id="c-name" placeholder="Category name"></div>
+          <div class="field"><label>Slug *</label><input type="text" id="c-slug" placeholder="category-slug"></div>
+          <div class="field"><label>Description</label><input type="text" id="c-desc" placeholder="Short description"></div>
+          <div class="field"><label>Image URL</label><input type="url" id="c-image" placeholder="https://..."></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:8px;">
+          <button class="btn btn-green btn-sm" onclick="saveCat()">Save Category</button>
+          <button class="btn btn-outline btn-sm" onclick="document.getElementById('cat-form-area').classList.add('hidden')">Cancel</button>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Name</th><th>Slug</th><th>Description</th><th>Actions</th></tr></thead>
+          <tbody>
+            ${cats.map(c => `
+              <tr>
+                <td><strong>${esc(c.name)}</strong></td>
+                <td style="color:var(--muted);">${esc(c.slug)}</td>
+                <td style="color:var(--muted);">${esc(c.description||'—')}</td>
+                <td>
+                  <button class="btn btn-outline btn-sm" onclick="editCat('${c.id}','${esc(c.name)}','${esc(c.slug)}','${esc(c.description||'')}','${esc(c.image||'')}')">Edit</button>
+                  <button class="btn btn-sm" style="color:var(--red);border:1px solid var(--border);margin-left:6px;" onclick="deleteCat('${c.id}','${esc(c.name)}')">Delete</button>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        ${!cats.length ? '<div class="empty">No categories yet.</div>' : ''}
+      </div>
+    `;
+
+    document.getElementById('c-name').addEventListener('input', function() {
+      if (!editingCatId) document.getElementById('c-slug').value = this.value.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+    });
+  } catch(e) { main.innerHTML = `<div class="empty">Error: ${esc(e.message)}</div>`; }
+}
+
+function showCatForm() {
+  editingCatId = null;
+  document.getElementById('cat-form-title').textContent = 'New Category';
+  ['c-name','c-slug','c-desc','c-image'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('cat-form-area').classList.remove('hidden');
+  document.getElementById('c-name').focus();
+}
+
+function editCat(id, name, slug, desc, image) {
+  editingCatId = id;
+  document.getElementById('cat-form-title').textContent = 'Edit Category';
+  document.getElementById('c-name').value = name;
+  document.getElementById('c-slug').value = slug;
+  document.getElementById('c-desc').value = desc;
+  document.getElementById('c-image').value = image;
+  document.getElementById('cat-form-area').classList.remove('hidden');
+  document.getElementById('c-name').focus();
+}
+
+async function saveCat() {
+  const name = document.getElementById('c-name').value.trim();
+  const slug = document.getElementById('c-slug').value.trim();
+  if (!name || !slug) { toast('Name and slug required', 'error'); return; }
+
+  const data = {
+    name, slug,
+    description: document.getElementById('c-desc').value.trim(),
+    image: document.getElementById('c-image').value.trim() || null,
+  };
+
+  try {
+    if (editingCatId) {
+      await adminApi(`/api/admin/categories/${editingCatId}`, { method: 'PUT', body: JSON.stringify(data) });
+      toast('Category updated ✓');
+    } else {
+      await adminApi('/api/admin/categories', { method: 'POST', body: JSON.stringify(data) });
+      toast('Category created ✓');
+    }
+    renderCategories();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function deleteCat(id, name) {
+  if (!confirm(`Delete category "${name}"?`)) return;
+  try {
+    await adminApi(`/api/admin/categories/${id}`, { method: 'DELETE' });
+    toast('Category deleted');
+    renderCategories();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+// ── SUBSCRIBERS ───────────────────────────────────────────────────
+async function renderSubscribers() {
+  const main = document.getElementById('main-area');
+  main.innerHTML = `<div class="spinner"></div>`;
+  try {
+    const subs = await adminApi('/api/admin/subscribers');
+    main.innerHTML = `
+      <div class="page-title">Subscribers <span style="color:var(--muted);font-size:14px;font-weight:400;">(${subs.length})</span>
+        <button class="btn btn-outline btn-sm" onclick="exportCSV()">Export CSV</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Name</th><th>Email</th><th>Date</th><th>Action</th></tr></thead>
+          <tbody>
+            ${subs.map(s => `
+              <tr>
+                <td>${esc(s.name)}</td>
+                <td style="color:var(--muted);">${esc(s.email)}</td>
+                <td style="color:var(--muted);">${fmtDate(s.createdAt)}</td>
+                <td><button class="btn btn-sm" style="color:var(--red);border:1px solid var(--border);" onclick="deleteSub('${s.id}','${esc(s.email)}')">Remove</button></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        ${!subs.length ? '<div class="empty">No subscribers yet.</div>' : ''}
+      </div>
+    `;
+    window._subs = subs;
+  } catch(e) { main.innerHTML = `<div class="empty">Error: ${esc(e.message)}</div>`; }
+}
+
+async function deleteSub(id, email) {
+  if (!confirm(`Remove subscriber "${email}"?`)) return;
+  try {
+    await adminApi(`/api/admin/subscribers/${id}`, { method: 'DELETE' });
+    toast('Subscriber removed');
+    renderSubscribers();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+function exportCSV() {
+  const subs = window._subs || [];
+  const csv = ['Name,Email,Date', ...subs.map(s => `"${s.name}","${s.email}","${fmtDate(s.createdAt)}"`)].join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv,' + encodeURIComponent(csv);
+  a.download = 'subscribers.csv';
+  a.click();
+}
+
+// ── SETTINGS ──────────────────────────────────────────────────────
+async function renderSettings() {
+  const main = document.getElementById('main-area');
+  main.innerHTML = `<div class="spinner"></div>`;
+  try {
+    const s = await adminApi('/api/settings').catch(()=>({}));
+    const popup = s.popup || {};
+    main.innerHTML = `
+      <div class="page-title">Site Settings</div>
+
+      <div class="card-box" style="max-width:600px;margin-bottom:20px;">
+        <h3>Welcome Popup</h3>
+        <div class="field" style="display:flex;align-items:center;gap:10px;">
+          <input type="checkbox" id="s-popup-enabled" style="width:auto;" ${popup.enabled?'checked':''}>
+          <label for="s-popup-enabled" style="text-transform:none;letter-spacing:0;margin:0;cursor:pointer;">Enable popup</label>
+        </div>
+        <div class="field"><label>Title</label><input type="text" id="s-popup-title" value="${esc(popup.title||'')}"></div>
+        <div class="field"><label>Text</label><textarea id="s-popup-text">${esc(popup.text||'')}</textarea></div>
+        <div class="field"><label>Image URL</label><input type="url" id="s-popup-image" value="${esc(popup.image||'')}"></div>
+        <div class="field"><label>Button Text</label><input type="text" id="s-popup-btntext" value="${esc(popup.btnText||'')}"></div>
+        <div class="field"><label>Button URL</label><input type="url" id="s-popup-btnlink" value="${esc(popup.btnLink||'')}"></div>
+        <button class="btn btn-green" onclick="saveSettings()">Save Settings</button>
+      </div>
+    `;
+  } catch(e) { main.innerHTML = `<div class="empty">Error: ${esc(e.message)}</div>`; }
+}
+
+async function saveSettings() {
+  const data = {
+    popup: {
+      enabled: document.getElementById('s-popup-enabled').checked,
+      title: document.getElementById('s-popup-title').value.trim(),
+      text: document.getElementById('s-popup-text').value.trim(),
+      image: document.getElementById('s-popup-image').value.trim() || null,
+      btnText: document.getElementById('s-popup-btntext').value.trim(),
+      btnLink: document.getElementById('s-popup-btnlink').value.trim(),
+    }
+  };
+  try {
+    await adminApi('/api/admin/settings', { method: 'PUT', body: JSON.stringify(data) });
+    toast('Settings saved ✓');
+  } catch(e) { toast(e.message, 'error'); }
+}
+</script>
+</body>
+</html>

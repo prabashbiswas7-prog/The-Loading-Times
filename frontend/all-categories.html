@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>All Categories — The Loading Times</title>
+  <link rel="icon" href="/assets/img/logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Lora:ital,wght@0,400;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<header class="site-header" id="site-header"></header>
+<div class="container">
+  <div class="page-hero"><h1>All Categories</h1><p>Browse topics we cover at The Loading Times.</p></div>
+  <div class="cats-grid" id="cats-grid" style="grid-template-columns:repeat(auto-fill,minmax(200px,1fr));"><div class="spinner"></div></div>
+</div>
+<footer class="site-footer" id="site-footer"></footer>
+<script src="/js/core.js"></script>
+<script>
+async function init() {
+  try {
+    const cats = await api('/api/categories');
+    const grid = document.getElementById('cats-grid');
+    if (!cats.length) { grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;">No categories yet.</div>`; return; }
+    grid.innerHTML = cats.map(c => `
+      <a href="/category.html?slug=${esc(c.slug)}" class="cat-card">
+        ${c.image ? `<img src="${esc(c.image)}" alt="${esc(c.name)}" loading="lazy">` : `<div class="cat-card-placeholder">📰</div>`}
+        <div class="cat-card-body"><h3>${esc(c.name)}</h3><p>${esc(c.description||'Explore articles')}</p></div>
+      </a>`).join('');
+  } catch(e) { document.getElementById('cats-grid').innerHTML = `<div class="empty-state">Could not load categories.</div>`; }
+}
+init();
+</script>
+</body>
+</html>

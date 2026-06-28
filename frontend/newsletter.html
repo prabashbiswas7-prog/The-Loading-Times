@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Newsletter — The Loading Times</title>
+  <link rel="icon" href="/assets/img/logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Lora:ital,wght@0,400;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<header class="site-header" id="site-header"></header>
+<div class="container">
+  <div class="static-content" style="text-align:center;padding-top:80px;">
+    <p style="color:var(--green);font-size:12px;letter-spacing:2px;text-transform:uppercase;margin-bottom:16px;">Newsletter</p>
+    <h1 style="font-size:42px;margin-bottom:16px;">Stay in the Loop</h1>
+    <p style="max-width:480px;margin:0 auto 40px;">Get The Loading Times delivered to your inbox. We publish slow, but we publish good.</p>
+    <form class="nl-form" id="nl-form" style="justify-content:center;">
+      <input type="text" id="nl-name" placeholder="Your Name" required style="max-width:200px;">
+      <input type="email" id="nl-email" placeholder="Your Email" required style="max-width:260px;">
+      <button type="submit" class="btn btn-green">Subscribe Free</button>
+    </form>
+    <div id="nl-msg" style="margin-top:20px;font-size:14px;"></div>
+    <p style="margin-top:40px;font-size:12px;color:var(--text-dim);">No spam. Unsubscribe anytime. We take your time seriously.</p>
+  </div>
+</div>
+<footer class="site-footer" id="site-footer"></footer>
+<script src="/js/core.js"></script>
+<script>
+document.getElementById('nl-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = e.target.querySelector('button');
+  const msg = document.getElementById('nl-msg');
+  btn.disabled = true; btn.textContent = 'Subscribing...';
+  try {
+    await api('/api/subscribe', { method: 'POST', body: JSON.stringify({ name: document.getElementById('nl-name').value.trim(), email: document.getElementById('nl-email').value.trim() }) });
+    msg.innerHTML = `<span class="text-green">✓ You're subscribed! Watch your inbox.</span>`;
+    e.target.reset();
+  } catch(err) {
+    msg.innerHTML = `<span style="color:var(--red);">✗ ${err.message}</span>`;
+  } finally { btn.disabled = false; btn.textContent = 'Subscribe Free'; }
+});
+</script>
+</body>
+</html>

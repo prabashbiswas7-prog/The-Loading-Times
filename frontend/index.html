@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Loading Times — News that takes its time. And yours.</title>
+  <meta name="description" content="The Loading Times — Independent journalism, delivered slow.">
+  <meta property="og:title" content="The Loading Times">
+  <meta property="og:description" content="News that takes its time. And yours.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://theloadingtimes.com/">
+  <meta property="og:image" content="/assets/img/logo.png">
+  <link rel="icon" href="/assets/img/logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Lora:ital,wght@0,400;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<header class="site-header" id="site-header"></header>
+
+<!-- Welcome Modal -->
+<div id="welcome-modal" class="modal-overlay">
+  <div class="modal-box">
+    <button class="modal-close" onclick="document.getElementById('welcome-modal').classList.remove('open')">×</button>
+    <div id="wm-image-wrap" style="display:none;">
+      <img id="wm-image" src="" alt="" style="width:100%;max-height:200px;object-fit:cover;">
+    </div>
+    <div class="modal-body">
+      <h2 id="wm-title" style="font-family:var(--font-head);font-size:22px;margin-bottom:10px;"></h2>
+      <p id="wm-text" style="color:var(--text-muted);font-size:14px;line-height:1.7;margin-bottom:20px;"></p>
+      <div id="wm-btn-wrap" style="display:none;text-align:center;">
+        <a id="wm-btn" href="#" class="btn btn-green"></a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Hero -->
+<div class="hero-section" id="hero-section">
+  <div class="empty-state">Loading headlines...</div>
+</div>
+
+<div class="container">
+  <div class="layout-main">
+    <div id="main-content">
+
+      <!-- Trending -->
+      <div class="section-header"><h2>Trending Articles</h2></div>
+      <div class="cards-grid" id="trending-grid"><div class="spinner"></div></div>
+
+      <!-- Categories -->
+      <div class="section-header">
+        <h2>Best Categories</h2>
+        <a href="/all-categories.html" class="btn btn-outline" style="font-size:12px;padding:6px 14px;border-radius:20px;">See all →</a>
+      </div>
+      <div class="cats-grid" id="cats-grid"><div class="empty-state" style="grid-column:1/-1;">Loading...</div></div>
+
+      <!-- Latest -->
+      <div class="section-header"><h2>Recent Articles</h2></div>
+      <div class="cards-grid" id="latest-grid"><div class="spinner"></div></div>
+      <div class="pagination hidden" id="pagination">
+        <button id="prev-btn" disabled>← Newer</button>
+        <button id="next-btn">Older →</button>
+      </div>
+
+      <!-- Newsletter -->
+      <div class="newsletter-section">
+        <h2>Subscribe to Our Newsletter</h2>
+        <p>Get the latest articles and independent journalism delivered straight to your inbox.</p>
+        <form class="nl-form" id="nl-form">
+          <input type="text" id="nl-name" placeholder="Your Name" required>
+          <input type="email" id="nl-email" placeholder="Your Email" required>
+          <button type="submit" class="btn btn-green">Subscribe</button>
+        </form>
+        <div id="nl-msg" style="margin-top:14px;font-size:13px;"></div>
+      </div>
+
+      <!-- Featured -->
+      <div class="section-header"><h2>Featured</h2></div>
+      <div class="cards-grid" id="featured-grid"><div class="spinner"></div></div>
+
+    </div>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-widget">
+        <h3>Popular Posts</h3>
+        <div id="popular-posts"><div class="spinner"></div></div>
+      </div>
+      <div class="sidebar-widget">
+        <h3>Topics</h3>
+        <div class="tag-cloud" id="tag-cloud">Loading...</div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<footer class="site-footer" id="site-footer"></footer>
+
+<script src="/js/core.js"></script>
+<script>
+const PAGE_SIZE = 16;
+let allPosts = [];
+let page = 1;
+
+async function init() {
+  try {
+    const posts = await api('/api/posts');
+    allPosts = sortByDate(posts);
+    await attachCatNames(allPosts);
+
+    loadHero([...allPosts]);
+    loadTrending([...allPosts]);
+    loadLatest();
+    loadFeatured([...allPosts]);
+    loadCats();
+    loadSidebar([...allPosts]);
+  } catch (e) {
+    console.error(e);
+    document.getElementById('main-content').innerHTML = `<div class="empty-state">Error loading content. Please try again.</div>`;
+  }
+}
+
+async function loadHero(posts) {
+  const el = document.getElementById('hero-section');
+  const featured = posts.filter(p => p.featured).slice(0, 5);
+  if (!featured.length) {
+    el.innerHTML = `<div class="empty-state">No featured articles yet.</div>`;
+    return;
+  }
+
+  const slidesHtml = featured.map((p, i) => `
+    <a href="/article.html?slug=${esc(p.slug)}" class="hero-slide ${i === 0 ? 'active' : ''}" data-index="${i}">
+      <img src="${esc(p.coverImage || '')}" alt="${esc(p.title)}" loading="${i === 0 ? 'eager' : 'lazy'}">
+      <div class="hero-overlay"></div>
+      <div class="hero-content">
+        ${p._catName ? `<span class="cat-tag">${esc(p._catName)}</span>` : ''}
+        <h2>${esc(p.title)}</h2>
+        <div class="meta">${fmtDate(p.publishedAt || p.createdAt)}</div>
+      </div>
+    </a>
+  `).join('');
+
+  const dotsHtml = featured.length > 1
+    ? featured.map((_, i) => `<button class="hero-dot ${i === 0 ? 'active' : ''}" data-index="${i}"></button>`).join('')
+    : '';
+
+  el.innerHTML = `
+    <div class="hero-slider-track">${slidesHtml}</div>
+    ${featured.length > 1 ? `
+      <div class="hero-timer-bar-container"><div class="hero-timer-bar"></div></div>
+      <div class="hero-controls">${dotsHtml}</div>
+      <button class="hero-arrow prev">&#10094;</button>
+      <button class="hero-arrow next">&#10095;</button>
+    ` : ''}
+  `;
+
+  if (featured.length > 1) initHeroSlider(el);
+}
+
+function loadTrending(posts) {
+  const grid = document.getElementById('trending-grid');
+  const top = [...posts].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 8);
+  grid.innerHTML = top.length ? top.map(p => cardHtml(p, p._catName)).join('') : `<div class="empty-state">No articles yet.</div>`;
+}
+
+function loadLatest() {
+  const grid = document.getElementById('latest-grid');
+  const pag = document.getElementById('pagination');
+  const start = (page - 1) * PAGE_SIZE;
+  const slice = allPosts.slice(start, start + PAGE_SIZE);
+
+  grid.innerHTML = slice.length ? slice.map(p => cardHtml(p, p._catName)).join('') : `<div class="empty-state">No articles yet.</div>`;
+
+  if (allPosts.length > PAGE_SIZE) {
+    pag.classList.remove('hidden');
+    document.getElementById('prev-btn').disabled = page === 1;
+    document.getElementById('next-btn').disabled = start + PAGE_SIZE >= allPosts.length;
+  }
+}
+
+function loadFeatured(posts) {
+  const grid = document.getElementById('featured-grid');
+  const feat = posts.filter(p => p.featured).slice(0, 8);
+  grid.innerHTML = feat.length ? feat.map(p => cardHtml(p, p._catName)).join('') : `<div class="empty-state">No featured articles.</div>`;
+}
+
+async function loadCats() {
+  const grid = document.getElementById('cats-grid');
+  try {
+    const cats = await cachedApi('/api/categories');
+    const top = cats.filter(c => !c.parentId).slice(0, 8);
+    if (!top.length) { grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;">No categories yet.</div>`; return; }
+    grid.innerHTML = top.map(c => `
+      <a href="/category.html?slug=${esc(c.slug)}" class="cat-card">
+        ${c.image ? `<img src="${esc(c.image)}" alt="${esc(c.name)}" loading="lazy">` : `<div class="cat-card-placeholder">📰</div>`}
+        <div class="cat-card-body">
+          <h3>${esc(c.name)}</h3>
+          <p>${esc(c.description || 'Explore articles')}</p>
+        </div>
+      </a>
+    `).join('');
+  } catch(e) { grid.innerHTML = `<div class="empty-state">Could not load categories.</div>`; }
+}
+
+function loadSidebar(posts) {
+  // Popular
+  const popular = [...posts].sort((a,b) => (b.views||0)-(a.views||0)).slice(0,5);
+  document.getElementById('popular-posts').innerHTML = popular.map(p => `
+    <div class="sidebar-post">
+      ${p.coverImage ? `<img src="${esc(p.coverImage)}" alt="${esc(p.title)}" loading="lazy">` : '<div style="width:60px;height:50px;background:var(--bg3);border-radius:4px;flex-shrink:0;"></div>'}
+      <div>
+        <a href="/article.html?slug=${esc(p.slug)}" class="sidebar-post-title">${esc(p.title)}</a>
+        <div class="sidebar-post-date">${fmtDate(p.publishedAt||p.createdAt)}</div>
+      </div>
+    </div>
+  `).join('') || '<div class="text-muted" style="font-size:13px;">No posts yet.</div>';
+
+  // Tags
+  const allTags = posts.flatMap(p => p.tags || []);
+  const tagCounts = {};
+  allTags.forEach(t => tagCounts[t] = (tagCounts[t]||0)+1);
+  const topTags = Object.entries(tagCounts).sort((a,b)=>b[1]-a[1]).slice(0,20).map(([t])=>t);
+  document.getElementById('tag-cloud').innerHTML = topTags.map(t =>
+    `<a href="/tag.html?tag=${encodeURIComponent(t)}" class="tag-pill">${esc(t)}</a>`
+  ).join('') || '<span class="text-muted" style="font-size:13px;">No tags yet.</span>';
+}
+
+document.getElementById('next-btn').addEventListener('click', () => { page++; loadLatest(); window.scrollTo({top:0,behavior:'smooth'}); });
+document.getElementById('prev-btn').addEventListener('click', () => { page--; loadLatest(); window.scrollTo({top:0,behavior:'smooth'}); });
+
+document.getElementById('nl-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = e.target.querySelector('button');
+  const msg = document.getElementById('nl-msg');
+  btn.disabled = true; btn.textContent = 'Subscribing...';
+  try {
+    await api('/api/subscribe', {
+      method: 'POST',
+      body: JSON.stringify({ name: document.getElementById('nl-name').value.trim(), email: document.getElementById('nl-email').value.trim() })
+    });
+    msg.innerHTML = `<span class="text-green">✓ Thanks for subscribing!</span>`;
+    e.target.reset();
+  } catch(err) {
+    msg.innerHTML = `<span style="color:var(--red);">✗ ${err.message}</span>`;
+  } finally { btn.disabled = false; btn.textContent = 'Subscribe'; }
+});
+
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contact — The Loading Times</title>
+  <link rel="icon" href="/assets/img/logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Lora:ital,wght@0,400;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<header class="site-header" id="site-header"></header>
+<div class="container">
+  <div class="static-content">
+    <p style="color:var(--green);font-size:12px;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;">Get In Touch</p>
+    <h1>Contact Us</h1>
+    <p>Have a story tip, correction, or collaboration request? We read every message (eventually).</p>
+
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:32px;margin-top:32px;">
+      <div style="display:grid;gap:16px;">
+        <div>
+          <label style="display:block;font-size:12px;color:var(--text-muted);margin-bottom:6px;font-weight:600;letter-spacing:0.5px;">YOUR NAME</label>
+          <input id="c-name" type="text" placeholder="John Doe" style="width:100%;padding:11px 14px;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:6px;font-family:var(--font-ui);font-size:14px;outline:none;">
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;color:var(--text-muted);margin-bottom:6px;font-weight:600;letter-spacing:0.5px;">EMAIL</label>
+          <input id="c-email" type="email" placeholder="you@example.com" style="width:100%;padding:11px 14px;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:6px;font-family:var(--font-ui);font-size:14px;outline:none;">
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;color:var(--text-muted);margin-bottom:6px;font-weight:600;letter-spacing:0.5px;">MESSAGE</label>
+          <textarea id="c-msg" rows="6" placeholder="Your message..." style="width:100%;padding:11px 14px;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:6px;font-family:var(--font-ui);font-size:14px;outline:none;resize:vertical;"></textarea>
+        </div>
+        <button id="c-submit" class="btn btn-green" style="width:fit-content;">Send Message</button>
+        <div id="c-result" style="font-size:13px;"></div>
+      </div>
+    </div>
+
+    <div style="margin-top:40px;display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:24px;">
+        <div style="font-size:24px;margin-bottom:10px;">✉️</div>
+        <h3 style="font-size:16px;margin-bottom:6px;">Editorial</h3>
+        <p style="font-size:13px;color:var(--text-muted);">Story tips, corrections, press releases</p>
+      </div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:24px;">
+        <div style="font-size:24px;margin-bottom:10px;">🤝</div>
+        <h3 style="font-size:16px;margin-bottom:6px;">Partnerships</h3>
+        <p style="font-size:13px;color:var(--text-muted);">Advertising, collaborations, sponsorships</p>
+      </div>
+    </div>
+  </div>
+</div>
+<footer class="site-footer" id="site-footer"></footer>
+<script src="/js/core.js"></script>
+<script>
+// Simple mailto fallback — replace with Worker endpoint if you add contact form storage
+document.getElementById('c-submit').addEventListener('click', () => {
+  const name = document.getElementById('c-name').value.trim();
+  const email = document.getElementById('c-email').value.trim();
+  const msg = document.getElementById('c-msg').value.trim();
+  const res = document.getElementById('c-result');
+  if (!name || !email || !msg) { res.innerHTML = `<span style="color:var(--red);">Please fill in all fields.</span>`; return; }
+  window.location.href = `mailto:hello@theloadingtimes.com?subject=Message from ${encodeURIComponent(name)}&body=${encodeURIComponent(msg + '\n\nFrom: ' + email)}`;
+  res.innerHTML = `<span class="text-green">✓ Opening your email client...</span>`;
+});
+</script>
+</body>
+</html>

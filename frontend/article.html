@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Article — The Loading Times</title>
+  <meta name="description" content="">
+  <link rel="icon" href="/assets/img/logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Lora:ital,wght@0,400;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<header class="site-header" id="site-header"></header>
+
+<div class="container" id="article-container">
+  <div class="spinner" style="margin-top:80px;"></div>
+</div>
+
+<footer class="site-footer" id="site-footer"></footer>
+
+<script src="/js/core.js"></script>
+<script>
+async function loadArticle() {
+  const slug = new URLSearchParams(location.search).get('slug');
+  const el = document.getElementById('article-container');
+
+  if (!slug) { el.innerHTML = `<div class="empty-state" style="margin-top:80px;">No article specified.</div>`; return; }
+
+  try {
+    const post = await api(`/api/posts/${encodeURIComponent(slug)}`);
+
+    // Update meta tags
+    document.title = `${post.title} — The Loading Times`;
+    document.querySelector('meta[name="description"]').content = post.excerpt || post.title;
+
+    // Increment views
+    if (post.id) {
+      api('/api/views', { method: 'POST', body: JSON.stringify({ postId: post.id }) }).catch(()=>{});
+    }
+
+    // Get category name
+    let catName = '';
+    if (post.categoryId) {
+      const map = await getCatsMap();
+      catName = map[post.categoryId]?.name || '';
+    }
+
+    // Get related posts
+    const related = await api(`/api/posts?categoryId=${post.categoryId || ''}`).catch(()=>[]);
+    const relatedFiltered = related.filter(p => p.slug !== slug).slice(0, 4);
+    await attachCatNames(relatedFiltered);
+
+    // Get popular posts for sidebar
+    const allPosts = await cachedApi('/api/posts');
+    const popular = [...allPosts].sort((a,b)=>(b.views||0)-(a.views||0)).slice(0,5);
+
+    el.innerHTML = `
+      <div class="breadcrumb">
+        <a href="/index.html">Home</a>
+        <span>/</span>
+        ${catName ? `<a href="/category.html?slug=${esc(post.categoryId)}">${esc(catName)}</a><span>/</span>` : ''}
+        <span>${esc(post.title)}</span>
+      </div>
+
+      <div class="article-layout">
+        <main>
+          <div class="article-header">
+            ${catName ? `<a href="/category.html?slug=${esc(post.categoryId)}" class="cat-tag">${esc(catName)}</a>` : ''}
+            <h1 class="article-title">${esc(post.title)}</h1>
+            <div class="article-meta">
+              <span>${fmtDate(post.publishedAt || post.createdAt)}</span>
+              ${post.author ? `<span>By ${esc(post.author)}</span>` : ''}
+              ${post.views ? `<span>👁 ${post.views} views</span>` : ''}
+              ${post.readTime ? `<span>⏱ ${post.readTime} min read</span>` : ''}
+            </div>
+          </div>
+
+          ${post.coverImage ? `<img class="article-cover" src="${esc(post.coverImage)}" alt="${esc(post.title)}" loading="eager">` : ''}
+
+          <div class="article-body">${post.content || ''}</div>
+
+          ${post.tags?.length ? `
+            <div class="article-tags">
+              ${post.tags.map(t => `<a href="/tag.html?tag=${encodeURIComponent(t)}" class="tag-pill">${esc(t)}</a>`).join('')}
+            </div>
+          ` : ''}
+
+          ${relatedFiltered.length ? `
+            <div style="margin-top:60px;">
+              <div class="section-header"><h2>Related Articles</h2></div>
+              <div class="cards-grid">${relatedFiltered.map(p => cardHtml(p, p._catName)).join('')}</div>
+            </div>
+          ` : ''}
+        </main>
+
+        <aside class="article-sidebar">
+          <div class="sidebar-widget" style="position:sticky;top:80px;">
+            <h3>Popular Posts</h3>
+            ${popular.map(p => `
+              <div class="sidebar-post">
+                ${p.coverImage ? `<img src="${esc(p.coverImage)}" alt="${esc(p.title)}" loading="lazy">` : '<div style="width:60px;height:50px;background:var(--bg3);border-radius:4px;flex-shrink:0;"></div>'}
+                <div>
+                  <a href="/article.html?slug=${esc(p.slug)}" class="sidebar-post-title">${esc(p.title)}</a>
+                  <div class="sidebar-post-date">${fmtDate(p.publishedAt||p.createdAt)}</div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </aside>
+      </div>
+    `;
+  } catch (e) {
+    console.error(e);
+    el.innerHTML = `<div class="empty-state" style="margin-top:80px;">Article not found.<br><a href="/index.html" class="text-green">← Back to Home</a></div>`;
+  }
+}
+
+loadArticle();
+</script>
+</body>
+</html>
