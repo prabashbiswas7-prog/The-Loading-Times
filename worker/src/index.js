@@ -67,16 +67,13 @@ export default {
 // FIREBASE HELPERS
 // ═══════════════════════════════════════════════════════════════
 
-function base64urlEncode(str) {
-  return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
-
 async function getFirebaseToken(env) {
   // Firebase Admin auth via service account → get access token
   const now = Math.floor(Date.now() / 1000);
-  const header = base64urlEncode(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
-  const payload = base64urlEncode(JSON.stringify({
+  const header = btoa(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
+  const payload = btoa(JSON.stringify({
     iss: env.FIREBASE_CLIENT_EMAIL,
+    sub: env.FIREBASE_CLIENT_EMAIL,
     aud: 'https://oauth2.googleapis.com/token',
     iat: now,
     exp: now + 3600,
@@ -94,12 +91,6 @@ async function getFirebaseToken(env) {
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`,
   });
-
-  if (!tokenRes.ok) {
-    const errorData = await tokenRes.json().catch(() => ({}));
-    throw new Error(`Google Auth Token Error: ${errorData.error_description || tokenRes.statusText}`);
-  }
-
   const tokenData = await tokenRes.json();
   return tokenData.access_token;
 }
