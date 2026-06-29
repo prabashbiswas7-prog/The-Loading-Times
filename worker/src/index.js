@@ -67,14 +67,11 @@ export default {
 // FIREBASE HELPERS
 // ═══════════════════════════════════════════════════════════════
 
-function base64urlEncode(str) {
-  return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
-
 async function getFirebaseToken(env) {
+  // Firebase Admin auth via service account → get access token
   const now = Math.floor(Date.now() / 1000);
-  const header = base64urlEncode(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
-  const payload = base64urlEncode(JSON.stringify({
+  const header = btoa(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
+  const payload = btoa(JSON.stringify({
     iss: env.FIREBASE_CLIENT_EMAIL,
     sub: env.FIREBASE_CLIENT_EMAIL,
     aud: 'https://oauth2.googleapis.com/token',
@@ -119,20 +116,12 @@ function firestoreURL(env, path) {
   return `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents/${path}`;
 }
 
-async function handleFirestoreResponse(res) {
-  if (!res.ok) {
-    const errorBody = await res.json().catch(() => ({}));
-    throw new Error(errorBody.error?.message || `Firestore error: ${res.status} ${res.statusText}`);
-  }
-  return res.json();
-}
-
 async function firestoreGet(env, path) {
   const token = await getFirebaseToken(env);
   const res = await fetch(firestoreURL(env, path), {
     headers: { Authorization: `Bearer ${token}` }
   });
-  return handleFirestoreResponse(res);
+  return res.json();
 }
 
 async function firestoreQuery(env, collection, conditions = [], orderBy = null, limit = null) {
@@ -156,7 +145,7 @@ async function firestoreQuery(env, collection, conditions = [], orderBy = null, 
     },
     body: JSON.stringify(query),
   });
-  return handleFirestoreResponse(res);
+  return res.json();
 }
 
 async function firestoreSet(env, path, data) {
@@ -169,7 +158,7 @@ async function firestoreSet(env, path, data) {
     },
     body: JSON.stringify({ fields: toFirestoreFields(data) }),
   });
-  return handleFirestoreResponse(res);
+  return res.json();
 }
 
 async function firestoreUpdate(env, path, data) {
@@ -184,19 +173,15 @@ async function firestoreUpdate(env, path, data) {
     },
     body: JSON.stringify({ fields }),
   });
-  return handleFirestoreResponse(res);
+  return res.json();
 }
 
 async function firestoreDelete(env, path) {
   const token = await getFirebaseToken(env);
-  const res = await fetch(firestoreURL(env, path), {
+  await fetch(firestoreURL(env, path), {
     method: 'DELETE',
     headers: { Authorization: `Bearer ${token}` }
   });
-  if (!res.ok) {
-    const errorBody = await res.json().catch(() => ({}));
-    throw new Error(errorBody.error?.message || `Firestore error: ${res.status} ${res.statusText}`);
-  }
 }
 
 async function firestoreAdd(env, collection, data) {
@@ -209,7 +194,7 @@ async function firestoreAdd(env, collection, data) {
     },
     body: JSON.stringify({ fields: toFirestoreFields(data) }),
   });
-  return handleFirestoreResponse(res);
+  return res.json();
 }
 
 function buildWhere(conditions) {
@@ -233,9 +218,9 @@ function opMap(op) {
 
 function toFirestoreValue(v) {
   if (typeof v === 'string') return { stringValue: v };
-  if (typeof v === 'number') return Number.isInteger(v) ? { integerValue: v } : { doubleValue: v };
+  if (typeof v === 'number') return { integerValue: v };
   if (typeof v === 'boolean') return { booleanValue: v };
-  if (v === null) return { nullValue: 'NULL_VALUE' };
+  if (v === null) return { nullValue: null };
   return { stringValue: String(v) };
 }
 
@@ -247,8 +232,6 @@ function toFirestoreFields(obj) {
       fields[k] = { timestampValue: new Date().toISOString() };
     } else if (Array.isArray(v)) {
       fields[k] = { arrayValue: { values: v.map(toFirestoreValue) } };
-    } else if (v && typeof v === 'object') {
-      fields[k] = { mapValue: { fields: toFirestoreFields(v) } };
     } else {
       fields[k] = toFirestoreValue(v);
     }
@@ -320,7 +303,7 @@ async function getPostBySlug(slug, env) {
 }
 
 async function getCategories(env) {
-  const results = await firestoreQuery(env, 'categories', [], null);
+  const results = await firestoreQuery(env, 'categories', [], [{ field: { fieldPath: 'name' }, direction: 'ASCENDING' }]);
   const cats = parseQueryResults(results);
   return json(cats);
 }
@@ -423,7 +406,7 @@ async function handleAdmin(request, env, path) {
 
   // Posts CRUD
   if (subPath === '/posts' && request.method === 'GET') {
-    const results = await firestoreQuery(env, 'posts', [], null);
+    const results = await firestoreQuery(env, 'posts', [], [{ field: { fieldPath: 'createdAt' }, direction: 'DESCENDING' }]);
     return json(parseQueryResults(results));
   }
   if (subPath === '/posts' && request.method === 'POST') {
@@ -448,10 +431,6 @@ async function handleAdmin(request, env, path) {
   }
 
   // Categories CRUD
-  if (subPath === '/categories' && request.method === 'GET') {
-    const results = await firestoreQuery(env, 'categories', [], null);
-    return json(parseQueryResults(results));
-  }
   if (subPath === '/categories' && request.method === 'POST') {
     const body = await request.json();
     body.createdAt = { __serverTimestamp: true };
@@ -473,23 +452,13 @@ async function handleAdmin(request, env, path) {
   // Settings
   if (subPath === '/settings' && request.method === 'PUT') {
     const body = await request.json();
-    const token = await getFirebaseToken(env);
-    const url = `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents/settings/site`;
-    const res = await fetch(url, {
-      method: 'PATCH',
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fields: toFirestoreFields(body) }),
-    });
-    if (!res.ok) {
-      const errorBody = await res.json().catch(() => ({}));
-      throw new Error(errorBody.error?.message || `Firestore error: ${res.status} ${res.statusText}`);
-    }
+    await firestoreUpdate(env, 'settings/site', body);
     return json({ success: true });
   }
 
   // Subscribers
   if (subPath === '/subscribers' && request.method === 'GET') {
-    const results = await firestoreQuery(env, 'subscribers', [], null);
+    const results = await firestoreQuery(env, 'subscribers', [], [{ field: { fieldPath: 'createdAt' }, direction: 'DESCENDING' }]);
     return json(parseQueryResults(results));
   }
   if (subPath.startsWith('/subscribers/') && request.method === 'DELETE') {
