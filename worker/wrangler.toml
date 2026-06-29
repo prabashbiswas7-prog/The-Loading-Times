@@ -3,7 +3,7 @@ main = "src/index.js"
 compatibility_date = "2024-01-01"
 
 [vars]
-FIREBASE_PROJECT_ID = "your-firebase-project-id"
+FIREBASE_PROJECT_ID = "theloadingtimes-dd969"
 
 # Secrets (set via `wrangler secret put`):
 # FIREBASE_CLIENT_EMAIL
